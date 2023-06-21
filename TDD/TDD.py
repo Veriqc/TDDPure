@@ -49,6 +49,7 @@ class Node:
         self.out_weight=[1]*num
         self.successor=[None]*num
         self.meas_prob=[]
+        self.ref_num = 0
 
 
 class TDD:
@@ -323,6 +324,44 @@ def Find_Or_Add_Unique_table(x,weigs=[],succ_nodes=[]):
         unique_table[temp_key]=res
     return res
 
+
+def incRef(tdd):
+    if tdd.node.key==-1:
+        return
+    
+    tdd.node.ref_num+=1
+    
+    if tdd.node.ref_num==1:
+        for k in range(tdd1.node.succ_num):
+            incRef(Slicing(tdd,tdd.node.key,k))
+            
+def decRef(tdd):
+    if tdd.node.key==-1:
+        return
+    
+    if tdd.node.ref_num==1:
+        print('Error In defRef')
+    
+    tdd.node.ref_num-=1
+    
+    if tdd.node.ref_num==0:
+        for k in range(tdd1.node.succ_num):
+            decRef(Slicing(tdd,tdd.node.key,k))            
+    
+    
+
+def garbageCollect():
+    global computed_table
+    global unique_table
+    temp_unique_table = dict()
+    for item in unique_table:
+        if not unique_table[item].ref_num==0:
+            temp_unique_table[item] = unique_table[item]
+    
+    unique_table.clear()
+    
+    unique_table = temp_unique_table
+    
 
 def normalize(x,the_successors):
     """The normalize and reduce procedure"""
