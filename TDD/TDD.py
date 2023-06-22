@@ -16,6 +16,90 @@ cont_find_time=0
 cont_hit_time=0
 epi=0.000001
 
+complex_table = dict()
+
+complex_cache = dict()
+
+cn0 = 0
+cn1 = 1
+
+class ComplexTableEntry:
+    def __init__(self,val=0):
+        self.val = val
+
+        
+class Complex:
+    def __init__(self,c=0):
+        self.r = ComplexTableEntry(c.real)
+        self.i = ComplexTableEntry(c.imag)
+        
+    def __add__(self,other):
+        res = Complex()
+        res.r.val = self.r.val+other.r.val
+        res.i.val = self.i.val+other.i.val
+        return res
+    
+    def __add__(self,other):
+        res = Complex()
+        res.r.val = self.r.val-other.r.val
+        res.i.val = self.i.val-other.i.val
+        return res    
+    
+    def __mul__(self,other):
+        res = Complex()
+        
+        ar=self.r.val
+        ai=self.i.val
+        br=other.r.val
+        bi=other.i.val
+        
+        res.r.val = ar*br-ai*bi
+        res.i.val = ar*bi+ai*br
+        return res
+    
+    def __truediv__(self,other):
+        res = Complex()
+        
+        ar=self.r.val
+        ai=self.i.val
+        br=other.r.val
+        bi=other.i.val
+        
+        cmag = br*br+bi*bi
+        res.r.val = (ar*br+ai*bi)/cmag
+        res.i.val = (ai*br-ar*bi)/cmag
+        return res   
+    
+    def norm(self):
+        ar=self.r.val
+        ai=self.i.val
+        return ar*ar+ai*ai
+    
+    
+    def __eq__(self,other):
+        if self.r == other.r and self.i == other.i:
+            return True
+        else:
+            return False
+        
+    def __str__(self):
+        return str(self.r.val+1j*self.i.val)        
+        
+        
+def Find_Or_Add_Complex_table(c : Complex):
+    key_r = int(round(c.r.val/epi))
+    key_i = int(round(c.i.val/epi))
+    res = Complex()
+    if not key_r in complex_table:
+        complex_table[key_r] = c.r
+    if not key_i in complex_table:
+        complex_table[key_i] = c.i                   
+    res.r=complex_table[key_r]
+    res.i=complex_table[key_i]
+    return res
+              
+              
+
 class Index:
     """The index, here idx is used when there is a hyperedge"""
     def __init__(self,key,idx=0):
@@ -43,10 +127,10 @@ class Index:
 class Node:
     """To define the node of TDD"""
     def __init__(self,key,num=2):
-        self.idx = 0
+        self.idx = Complex(0)
         self.key = key
         self.succ_num=num
-        self.out_weight=[1]*num
+        self.out_weight=[Complex(1)]*num
         self.successor=[None]*num
         self.meas_prob=[]
         self.ref_num = 0
@@ -55,7 +139,7 @@ class Node:
 class TDD:
     def __init__(self,node):
         """TDD"""
-        self.weight=1
+        self.weight = Complex(1)
         
         self.index_set=[]
         
@@ -87,7 +171,7 @@ class TDD:
         dot=Digraph(name='reduced_tree')
         dot=layout(self.node,self.key_2_index,dot,edge,real_label)
         dot.node('-0','',shape='none')
-        dot.edge('-0',str(self.node.idx),color="blue",label=str(complex(round(self.weight.real,2),round(self.weight.imag,2))))
+        dot.edge('-0',str(self.node.idx),color="blue",label=str(complex(round(self.weight.r.val,2),round(self.weight.i.val,2))))
         dot.format = 'png'
         return Image(dot.render('output'))
     
@@ -126,22 +210,6 @@ class TDD:
                      
 
         res = tdd_2_np(self,split_pos,key_repeat_num)
-#         var_order=[]
-#         print(self.index_2_key)
-#         if var and self.index_2_key:
-#             var_order=[idx.key for idx in var]
-#         elif self.index_set and self.index_2_key:
-#             var_order=[idx.key for idx in self.index_set]
-#         print(res.shape)
-#         print(var_order,orig_order)
-        
-#         if var_order:
-#             for k in range(len(var_order)):
-#                 if orig_order[k]!=var_order[k]:
-#                     k1=orig_order.index(var_order[k])
-#                     res=res.swapaxes(k,k1)
-#                     orig_order[k1]=orig_order[k]
-#                 orig_order[k]=0
 
         return res
 
@@ -176,7 +244,7 @@ class TDD:
     def get_amplitude(self,b):
         """b is the term for calculating the amplitude"""
         if len(b)==0:
-            return self.weight
+            return self.weight.r.val+1j*self.weight.i.val
         
         if len(b)!=self.node.key+1:
             b.pop(0)
@@ -185,7 +253,8 @@ class TDD:
             temp_tdd=Slicing(self,self.node.key,b[0])
             b.pop(0)
             res=temp_tdd.get_amplitude(b)
-            return res*self.weight
+            w=res*self.weight
+            return w.r.va+1j*w.i.val
             
     def sampling(self,k):
         res=[]
@@ -197,7 +266,7 @@ class TDD:
         
         
     def __eq__(self,other):
-        if self.node==other.node and get_int_key(self.weight)==get_int_key(other.weight):# and self.key_2_index==other.key_2_index
+        if self.node==other.node and self.weight == other.weight:# and self.key_2_index==other.key_2_index
             return True
         else:
             return False
@@ -213,7 +282,7 @@ def layout(node,key_2_idx,dot=Digraph(),succ=[],real_label=True):
         dot.node(str(node.idx), str(node.key), fontname="helvetica",shape="circle",color="red")
     for k in range(node.succ_num):
         if node.successor[k]:
-            label1=str(complex(round(node.out_weight[k].real,2),round(node.out_weight[k].imag,2)))
+            label1=str(complex(round(node.out_weight[k].r.val,2),round(node.out_weight[k].i.val,2)))
             if not node.successor[k] in succ:
                 dot=layout(node.successor[k],key_2_idx,dot,succ,real_label)
                 dot.edge(str(node.idx),str(node.successor[k].idx),color=col[k%4],label=label1)
@@ -229,6 +298,7 @@ def Ini_TDD(index_order=[]):
     global unique_table
     global global_node_idx
     global add_find_time,add_hit_time,cont_find_time,cont_hit_time
+    global cn0, cn1
     global_node_idx=0
     unique_table = dict()
     computed_table = dict()
@@ -237,6 +307,8 @@ def Ini_TDD(index_order=[]):
     cont_find_time=0
     cont_hit_time=0
     set_index_order(index_order)
+    cn0 = Find_Or_Add_Complex_table(Complex(0))
+    cn1 = Find_Or_Add_Complex_table(Complex(1))
     return get_identity_tdd()
 
 def Clear_TDD():
@@ -308,10 +380,8 @@ def Find_Or_Add_Unique_table(x,weigs=[],succ_nodes=[]):
             res.idx=0
             unique_table[x]=res
         return res
-    temp_key=[x]
-    for k in range(len(weigs)):
-        temp_key.append(get_int_key(weigs[k]))
-        temp_key.append(succ_nodes[k])
+    temp_key=[x] + [(w.r, w.i) for w in weigs] + succ_nodes
+
     temp_key=tuple(temp_key)
     if temp_key in unique_table:
         return unique_table[temp_key]
@@ -323,8 +393,36 @@ def Find_Or_Add_Unique_table(x,weigs=[],succ_nodes=[]):
         res.successor=succ_nodes
         unique_table[temp_key]=res
     return res
+    
 
-
+def normalize(x,the_successors):
+    """The normalize and reduce procedure"""
+    global epi
+    all_equal=True
+    for k in range(1,len(the_successors)):
+        if the_successors[k]!=the_successors[0]:
+            all_equal=False
+            break
+    if all_equal:
+        return the_successors[0]
+    
+    weigs=[succ.weight for succ in the_successors]
+    
+    weigs_abs=[weig.norm() for weig in weigs]
+    weig_max=weigs[weigs_abs.index(max(weigs_abs))]
+    weigs=[Find_Or_Add_Complex_table(weig/weig_max) for weig in weigs]
+#     for k in range(len(the_successors)):
+#         if get_int_key(weigs[k])==(0,0):
+#             node=Find_Or_Add_Unique_table(-1)
+#             the_successors[k]=TDD(node)
+#             the_successors[k].weight=weigs[k]=0    
+    succ_nodes=[succ.node for succ in the_successors]
+    node=Find_Or_Add_Unique_table(x,weigs,succ_nodes)
+    res=TDD(node)
+    res.weight=Find_Or_Add_Complex_table(weig_max)
+    return res
+              
+              
 def incRef(tdd):
     if tdd.node.key==-1:
         return
@@ -360,51 +458,7 @@ def garbageCollect():
     
     unique_table.clear()
     
-    unique_table = temp_unique_table
-    
-
-def normalize(x,the_successors):
-    """The normalize and reduce procedure"""
-    global epi
-    all_equal=True
-    for k in range(1,len(the_successors)):
-        if the_successors[k]!=the_successors[0]:
-            all_equal=False
-            break
-    if all_equal:
-        return the_successors[0]
-    
-    weigs=[succ.weight for succ in the_successors]
-
-#     all_zeros=True
-#     for k in range(len(the_successors)):
-#         if get_int_key(weigs[k])!=(0,0):
-#             all_zeros=False
-#             break
-#     if all_zeros:
-#         node=Find_Or_Add_Unique_table(-1)
-#         res=TDD(node)
-#         res.weight=0
-#         return res
-#     for k in range(len(the_successors)):
-#         if get_int_key(weigs[k])==(0,0):
-#             node=Find_Or_Add_Unique_table(-1)
-#             the_successors[k]=TDD(node)
-#             the_successors[k].weight=weigs[k]=0
-    
-    weigs_abs=[np.around(abs(weig)/epi) for weig in weigs]
-    weig_max=weigs[weigs_abs.index(max(weigs_abs))]
-    weigs=[weig/weig_max for weig in weigs]
-    for k in range(len(the_successors)):
-        if get_int_key(weigs[k])==(0,0):
-            node=Find_Or_Add_Unique_table(-1)
-            the_successors[k]=TDD(node)
-            the_successors[k].weight=weigs[k]=0    
-    succ_nodes=[succ.node for succ in the_successors]
-    node=Find_Or_Add_Unique_table(x,weigs,succ_nodes)
-    res=TDD(node)
-    res.weight=weig_max
-    return res
+    unique_table = temp_unique_table              
 
 def get_count():
     global add_find_time,add_hit_time,cont_find_time,cont_hit_time
@@ -416,42 +470,52 @@ def find_computed_table(item):
     global computed_table,add_find_time,add_hit_time,cont_find_time,cont_hit_time
     if item[0]=='s':
         temp_key=item[1].index_2_key[item[2]]
-        the_key=('s',get_int_key(item[1].weight),item[1].node,temp_key,item[3])
+        the_key=('s',item[1].weight.r,item[1].weight.i,item[1].node,temp_key,item[3])
         if computed_table.__contains__(the_key):
             res = computed_table[the_key]
-            tdd = TDD(res[1])
-            tdd.weight = res[0]
+            tdd = TDD(res[2])
+            tdd.weight = Complex()
+            tdd.weight.r=res[0]
+            tdd.weight.i=res[1] 
             return tdd
     elif item[0] == '+':
-        the_key=('+',get_int_key(item[1].weight),item[1].node,get_int_key(item[2].weight),item[2].node)
+        the_key=('+',item[1].weight.r,item[1].weight.i,item[1].node,item[2].weight.r,item[2].weight.i,item[2].node)
         add_find_time+=1
         if computed_table.__contains__(the_key):
             res = computed_table[the_key]
-            tdd = TDD(res[1])
-            tdd.weight = res[0]
+            tdd = TDD(res[2])
+            tdd.weight = Complex()
+            tdd.weight.r=res[0]
+            tdd.weight.i=res[1] 
             add_hit_time+=1
             return tdd
-        the_key=('+',get_int_key(item[2].weight),item[2].node,get_int_key(item[1].weight),item[1].node)
+        the_key=('+',item[2].weight.r,item[2].weight.i,item[2].node,item[1].weight.r,item[1].weight.i,item[1].node)
         if computed_table.__contains__(the_key):
             res = computed_table[the_key]
-            tdd = TDD(res[1])
-            tdd.weight = res[0]
+            tdd = TDD(res[2])
+            tdd.weight = Complex()
+            tdd.weight.r=res[0]
+            tdd.weight.i=res[1] 
             add_hit_time+=1
             return tdd
     else:
-        the_key=('*',get_int_key(item[1].weight),item[1].node,get_int_key(item[2].weight),item[2].node,item[3][0],item[3][1],item[4])
+        the_key=('*',item[1].weight.r,item[1].weight.i,item[1].node,item[2].weight.r,item[2].weight.i,item[2].node,item[3][0],item[3][1],item[4])
         cont_find_time+=1
         if computed_table.__contains__(the_key):
             res = computed_table[the_key]
-            tdd = TDD(res[1])
-            tdd.weight = res[0]
+            tdd = TDD(res[2])
+            tdd.weight = Complex()
+            tdd.weight.r=res[0]
+            tdd.weight.i=res[1] 
             cont_hit_time+=1            
             return tdd
-        the_key=('*',get_int_key(item[2].weight),item[2].node,get_int_key(item[1].weight),item[1].node,item[3][1],item[3][0],item[4])
+        the_key=('*',item[2].weight.r,item[2].weight.i,item[2].node,item[1].weight.r,item[1].weight.i,item[1].node,item[3][1],item[3][0],item[4])
         if computed_table.__contains__(the_key):
             res = computed_table[the_key]
-            tdd = TDD(res[1])
-            tdd.weight = res[0]
+            tdd = TDD(res[2])
+            tdd.weight = Complex()
+            tdd.weight.r=res[0]
+            tdd.weight.i=res[1] 
             cont_hit_time+=1            
             return tdd
     return None
@@ -461,12 +525,12 @@ def insert_2_computed_table(item,res):
     global computed_table,cont_time,find_time,hit_time
     if item[0]=='s':
         temp_key=item[1].index_2_key[item[2]]
-        the_key = ('s',get_int_key(item[1].weight),item[1].node,temp_key,item[3])
+        the_key = ('s',item[1].weight.r,item[1].weight.i,item[1].node,temp_key,item[3])
     elif item[0] == '+':
-        the_key = ('+',get_int_key(item[1].weight),item[1].node,get_int_key(item[2].weight),item[2].node)
+        the_key = ('+',item[1].weight.r,item[1].weight.i,item[1].node,item[2].weight.r,item[2].weight.i,item[2].node)
     else:
-        the_key = ('*',get_int_key(item[1].weight),item[1].node,get_int_key(item[2].weight),item[2].node,item[3][0],item[3][1],item[4])
-    computed_table[the_key] = (res.weight,res.node)
+        the_key = ('*',item[1].weight.r,item[1].weight.i,item[1].node,item[2].weight.r,item[2].weight.i,item[2].node,item[3][0],item[3][1],item[4])
+    computed_table[the_key] = (res.weight.r,res.weight.i,res.node)
     
 def get_index_2_key(var):
     var_sort=copy.copy(var)
@@ -514,7 +578,7 @@ def get_tdd2(U,var,idx_2_key=None):
         res=TDD(node)
         for k in range(U_dim):
             U=U[0]
-        res.weight=U
+        res.weight = Find_Or_Add_Complex_table(Complex(U))
         return res
      
     if not idx_2_key:
@@ -557,7 +621,7 @@ def np_2_tdd(U,order=[],key_width=True):
         res=TDD(node)
         for k in range(U_dim):
             U=U[0]
-        res.weight=U
+        res.weight = Find_Or_Add_Complex_table(Complex(U))
         return res
     
     if not order:
@@ -601,7 +665,7 @@ def np_2_tdd2(U,split_pos=None):
         res=TDD(node)
         for k in range(U_dim):
             U=U[0]
-        res.weight=U
+        res.weight = Find_Or_Add_Complex_table(Complex(U))
         return res
     if split_pos==None:
         split_pos=U_dim-1
@@ -622,7 +686,7 @@ def tdd_2_np(tdd,split_pos=None,key_repeat_num=dict()):
         split_pos=tdd.node.key
             
     if split_pos==-1:
-        return tdd.weight
+        return tdd.weight.r.val+1j*tdd.weight.i.val
     else:
         the_succs=[]
         for k in range(tdd.key_width[split_pos]):
@@ -654,6 +718,7 @@ def tdd_2_np(tdd,split_pos=None,key_repeat_num=dict()):
         return res
     
     
+"""need modify"""                
 def get_measure_prob(tdd):
     if tdd.node.meas_prob:
         return tdd
@@ -666,8 +731,11 @@ def get_measure_prob(tdd):
     get_measure_prob(Slicing(tdd,tdd.node.key,0))
     get_measure_prob(Slicing(tdd,tdd.node.key,1))
     tdd.node.meas_prob=[0]*2
-    tdd.node.meas_prob[0]=abs(tdd.node.out_weight[0])**2*sum(tdd.node.successor[0].meas_prob)*2**(tdd.node.key-tdd.node.successor[0].key)
-    tdd.node.meas_prob[1]=abs(tdd.node.out_weight[1])**2*sum(tdd.node.successor[1].meas_prob)*2**(tdd.node.key-tdd.node.successor[1].key)
+    p0=tdd.node.out_weight[0].r.val*tdd.node.out_weight[0].r.val+tdd.node.out_weight[0].i.val*tdd.node.out_weight[0].i.val
+    p1=tdd.node.out_weight[1].r.val*tdd.node.out_weight[1].r.val+tdd.node.out_weight[1].i.val*tdd.node.out_weight[1].i.val
+                
+    tdd.node.meas_prob[0]=p0*sum(tdd.node.successor[0].meas_prob)*2**(tdd.node.key-tdd.node.successor[0].key-1)
+    tdd.node.meas_prob[1]=p1*sum(tdd.node.successor[1].meas_prob)*2**(tdd.node.key-tdd.node.successor[1].key-1)
     return tdd
 
     
@@ -794,24 +862,24 @@ def contract(tdd1,tdd2,key_2_new_key,cont_order,cont_num):
     w2=tdd2.weight
     
     if k1==-1 and k2==-1:
-        if w1==0:
+        if w1.r.val==0 and w1.i.val==0:
             tdd=TDD(tdd1.node)
-            tdd.weight=0
+            tdd.weight = cn0
             return tdd
-        if w2==0:
+        if w2.r.val==0 and w2.i.val==0:
             tdd=TDD(tdd1.node)
-            tdd.weight=0
+            tdd.weight = cn0
             return tdd
         tdd=TDD(tdd1.node)
-        tdd.weight=w1*w2
+        tdd.weight = w1*w2
         if cont_num>0:
-            tdd.weight*=2**cont_num
+            tdd.weight*=Complex(2**cont_num)
         return tdd
 
     if k1==-1:
-        if w1==0:
+        if w1.r.val==0 and w1.i.val==0:
             tdd=TDD(tdd1.node)
-            tdd.weight=0
+            tdd.weight = cn0
             return tdd
         if cont_num ==0 and key_2_new_key[1][k2]==k2:
             tdd=TDD(tdd2.node)
@@ -819,17 +887,17 @@ def contract(tdd1,tdd2,key_2_new_key,cont_order,cont_num):
             return tdd
             
     if k2==-1:
-        if w2==0:
+        if w2.r.val==0 and w2.i.val==0:
             tdd=TDD(tdd2.node)
-            tdd.weight=0
+            tdd.weight = cn0
             return tdd        
         if cont_num ==0 and key_2_new_key[0][k1]==k1:
             tdd=TDD(tdd1.node)
-            tdd.weight=w1*w2
+            tdd.weight = w1*w2
             return tdd
     
-    tdd1.weight=1
-    tdd2.weight=1
+    tdd1.weight = cn1
+    tdd2.weight = cn1
     
     temp_key_2_new_key=[]
     temp_key_2_new_key.append(tuple([k for k in key_2_new_key[0][:(k1+1)]]))
@@ -872,7 +940,7 @@ def contract(tdd1,tdd2,key_2_new_key,cont_order,cont_num):
             tdd.weight=tdd.weight*w1*w2
         else:
             tdd=TDD(Find_Or_Add_Unique_table(-1))
-            tdd.weight=0
+            tdd.weight = cn0
             for k in range(tdd1.node.succ_num):
                 res=contract(Slicing(tdd1,k1,k),Slicing(tdd2,k2,k),key_2_new_key,cont_order,cont_num-1)           
                 tdd=add(tdd,res)
@@ -890,7 +958,7 @@ def contract(tdd1,tdd2,key_2_new_key,cont_order,cont_num):
             tdd.weight=tdd.weight*w1*w2
         else:
             tdd=TDD(Find_Or_Add_Unique_table(-1))
-            tdd.weight=0
+            tdd.weight = cn0
             for k in range(tdd2.node.succ_num):
                 res=contract(tdd1,Slicing(tdd2,k2,k),key_2_new_key,cont_order,cont_num-1)           
                 tdd=add(tdd,res)
@@ -946,18 +1014,18 @@ def add(tdd1,tdd2):
     k1=tdd1.node.key
     k2=tdd2.node.key
     
-    if tdd1.weight==0:
+    if tdd1.weight.r.val==0 and tdd1.weight.i.val==0:
         return tdd2.self_copy()
     
-    if tdd2.weight==0:
+    if tdd2.weight.r.val==0 and tdd2.weight.i.val==0:
         return tdd1.self_copy()
     
     if tdd1.node==tdd2.node:
         weig=tdd1.weight+tdd2.weight
-        if get_int_key(weig)==(0,0):
+        if abs(weig.r.val) < epi and abs(weig.i.val) < epi:
             term=Find_Or_Add_Unique_table(-1)
             res=TDD(term)
-            res.weight=0
+            res.weight = cn0
             return res
         else:
             res=TDD(tdd1.node)
