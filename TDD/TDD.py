@@ -39,15 +39,29 @@ class Complex:
         res.i.val = self.i.val+other.i.val
         return res
     
-    def __add__(self,other):
+    def __sub__(self,other):
         res = Complex()
         res.r.val = self.r.val-other.r.val
         res.i.val = self.i.val-other.i.val
         return res    
     
     def __mul__(self,other):
-        res = Complex()
         
+        if self==cn0 or other == cn0:
+            return cn0         
+        
+        res = Complex()
+        if self==cn1:
+            res.r.val = other.r.val
+            res.i.val = other.i.val
+            return res
+        
+        if other==cn1:
+            res.r.val = self.r.val
+            res.i.val = self.i.val
+            return res
+    
+    
         ar=self.r.val
         ai=self.i.val
         br=other.r.val
@@ -58,7 +72,19 @@ class Complex:
         return res
     
     def __truediv__(self,other):
+        
+        if self==other:
+            return cn1
+        
+        if self == cn0:
+            return cn0
+        
         res = Complex()
+        
+        if other==cn1:
+            res.r.val = self.r.val
+            res.i.val = self.i.val
+            return res        
         
         ar=self.r.val
         ai=self.i.val
