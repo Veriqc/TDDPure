@@ -127,7 +127,6 @@ cn0 = Complex(0)
 cn1 = Complex(1)    
         
 def Find_Or_Add_Complex_table(c : Complex):
-    
     if c==cn0:
         return cn0
     if c==cn1:
@@ -141,9 +140,9 @@ def Find_Or_Add_Complex_table(c : Complex):
     key_i = int(round(c.i.val/epi))
     res = Complex()
     if not key_r in complex_table:
-        complex_table[key_r] = c.r
+        complex_table[key_r] = ComplexTableEntry(c.r.val)
     if not key_i in complex_table:
-        complex_table[key_i] = c.i                   
+        complex_table[key_i] = ComplexTableEntry(c.i.val)                  
     res.r=complex_table[key_r]
     res.i=complex_table[key_i]
     return res
@@ -644,7 +643,7 @@ def insert_2_computed_table(item,res):
 
     if item[0] == '+':
         the_key = (item[1].weight.r,item[1].weight.i,item[1].node,item[2].weight.r,item[2].weight.i,item[2].node)
-        computed_table['+'][the_key] = (res.weight.r,res.weight.i,res.node,item[1].weight.r.val,item[1].weight.i.val,item[2].weight.r.val,item[2].weight.i.val)
+        computed_table['+'][the_key] = (res.weight.r.val,res.weight.i.val,res.node,item[1].weight.r.val,item[1].weight.i.val,item[2].weight.r.val,item[2].weight.i.val)
     else:
         the_key = (item[1].node,item[2].node,item[3][0],item[3][1],item[4])
         computed_table['*'][the_key] = (res.weight.r.val,res.weight.i.val,res.node)
@@ -927,7 +926,7 @@ def contract(tdd1,tdd2,key_2_new_key,cont_order,cont_num):
     k2=tdd2.node.key
     w1=tdd1.weight
     w2=tdd2.weight
-#     print('912',k1,k2,w1,w2)
+#     print('930',k1,k2,w1,w2)
     if w1== cn0 or w2==cn0:
         return TDD(terminal_node,cn0)    
     
@@ -957,7 +956,7 @@ def contract(tdd1,tdd2,key_2_new_key,cont_order,cont_num):
     
     tdd1.weight = cn1
     tdd2.weight = cn1
-    
+
     temp_key_2_new_key=[]
     temp_key_2_new_key.append(tuple([k for k in key_2_new_key[0][:(k1+1)]]))
     temp_key_2_new_key.append(tuple([k for k in key_2_new_key[1][:(k2+1)]]))
@@ -1035,18 +1034,22 @@ def contract(tdd1,tdd2,key_2_new_key,cont_order,cont_num):
                     
     insert_2_computed_table(['*',tdd1,tdd2,temp_key_2_new_key,cont_num],tdd)
     tdd1.weight=w1
-    tdd2.weight=w2    
+    tdd2.weight=w2
+
     if not tdd.weight==cn0 and (w1!=cn1 or w2!=cn1):
         if tdd.weight==cn1:
             temp = w1*w2
             tdd.weight=getCachedComplex(temp.r.val,temp.i.val)
         else:
             temp = tdd.weight*w1*w2
+#             print('a',tdd.weight)
             tdd.weight.r.val = temp.r.val
             tdd.weight.i.val = temp.i.val
+#             print('b',tdd.weight)
         if equalsZero(tdd.weight):
             releaseCached(tdd.weight)
             return TDD(terminal_node,cn0)
+#     print('1050',tdd.weight,id(tdd.weight))
     return tdd
     
 def Slicing(tdd,x,c):
@@ -1129,7 +1132,7 @@ def add(tdd1,tdd2):
         if equalsZero(res.weight):
             return TDD(terminal_node,cn0)
         res.weight=getCachedComplex(res.weight.r.val,res.weight.i.val)
-        return tdd
+        return res
     
     the_successors=[]
     if k1>k2:
