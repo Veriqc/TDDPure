@@ -14,7 +14,7 @@ add_find_time=0
 add_hit_time=0
 cont_find_time=0
 cont_hit_time=0
-epi=0.000001
+epi=1e-5
 
 terminal_node = None
 
@@ -219,19 +219,6 @@ def Find_Or_Add_Complex_table(c : Complex):
         res.i=complex_table[key_i]
     return res
 
-
-
-# def Find_Or_Add_Complex_cache(c : Complex):
-#     key_r = int(round(c.r.val/epi))
-#     key_i = int(round(c.i.val/epi))
-#     res = Complex()
-#     if not key_r in complex_cache:
-#         complex_cache[key_r] = c.r
-#     if not key_i in complex_cache:
-#         complex_cache[key_i] = c.i                   
-#     res.r = complex_cache[key_r]
-#     res.i = complex_cache[key_i]
-#     return res
               
 def getCachedComplex():
     global cacheAvail,cacheCount
@@ -292,7 +279,7 @@ class Node:
         self.idx = 0
         self.key = key
         self.succ_num=num
-        self.out_weight=[cn1]*num
+        self.out_weight=[None]*num
         self.successor=[None]*num
         self.meas_prob=[]
         self.ref_num = 0
@@ -576,9 +563,18 @@ def normalize(x,the_successors,cached = False):
             the_successors[k]=TDD(terminal_node,cn0)    
     
     
-    weigs_abs=[succ.weight.norm() for succ in the_successors]
-    max_pos = weigs_abs.index(max(weigs_abs))
-    weig_max=the_successors[max_pos].weight
+#     weigs_abs=[int(round(succ.weight.norm()/epi)) for succ in the_successors]
+#     max_pos = weigs_abs.index(max(weigs_abs))
+#     weig_max = the_successors[max_pos].weight
+    
+    max_pos = 0
+    weig_max = the_successors[0].weight
+    weig_max_norm = weig_max.norm()
+    for k in range(1,len(the_successors)):
+        if the_successors[k].weight.norm() - weig_max_norm>epi:
+            max_pos=k
+            weig_max = the_successors[k].weight
+            weig_max_norm = weig_max.norm()
     
     if weig_max == cn0:
         return TDD(terminal_node,cn0)
@@ -979,7 +975,7 @@ def cont(tdd1,tdd2):
     tdd.weight=Find_Or_Add_Complex_table(tdd.weight)
 #     print('862 out cacheCount',cacheCount)
     if not cacheCount==cacheCount_in:
-        print('Something went wrong')
+        print('Something went wrong, cacheCount not match')
     
     tdd.index_set=var_out
     tdd.index_2_key=idx_2_key
@@ -1013,7 +1009,9 @@ def contract(tdd1,tdd2,key_2_new_key,cont_order,cont_num):
         if cont_num>0:
             cacheAvail.r.val=2**cont_num
             cacheAvail.i.val=0
+#             temp = getCachedComplex2(2**cont_num,0)
             cn_mul(tdd.weight,tdd.weight,cacheAvail)
+#             releaseCached(temp)
         return tdd
 
     if k1==-1:
@@ -1109,7 +1107,6 @@ def contract(tdd1,tdd2,key_2_new_key,cont_order,cont_num):
     insert_2_computed_table(['*',tdd1,tdd2,temp_key_2_new_key,cont_num],tdd)
     tdd1.weight=w1
     tdd2.weight=w2
-
     if not tdd.weight==cn0 and (w1!=cn1 or w2!=cn1):
         if tdd.weight==cn1:
             tdd.weight = cn_mulCached(w1,w2)
@@ -1119,7 +1116,6 @@ def contract(tdd1,tdd2,key_2_new_key,cont_order,cont_num):
         if equalsZero(tdd.weight):
             releaseCached(tdd.weight)
             return TDD(terminal_node,cn0)
-#     print('1050',tdd.weight,id(tdd.weight))
     return tdd
     
 def Slicing(tdd,x,c):
