@@ -1,35 +1,35 @@
 """Define global variables"""
 
-epi=1e-6
+epi=1e-20
 
 complex_table = dict()
 
-complex_entry_table =dict()
+complex_entry_table = dict()
 
 cacheCount = 1
-
 
 class ComplexTableEntry:
     def __init__(self,val=0):
         self.val = val
+        self.next = None
+        self.ref = None
         
     def __str__(self):
         return str(val)
         
 class Complex:
-    def __init__(self,c=0):
-        self.r = ComplexTableEntry(c.real)
-        self.i = ComplexTableEntry(c.imag)
-        self.next = None
+    def __init__(self,r_val=None,i_val=None):
+        self.r = r_val
+        self.i = i_val
         
     def __add__(self,other):
-        res = cacheAvail
+        res = Complex(cacheAvail,cacheAvail.next)
         res.r.val = self.r.val+other.r.val
         res.i.val = self.i.val+other.i.val
         return res
     
     def __sub__(self,other):
-        res = cacheAvail
+        res = Complex(cacheAvail,cacheAvail.next)
         res.r.val = self.r.val-other.r.val
         res.i.val = self.i.val-other.i.val
         return res    
@@ -39,7 +39,7 @@ class Complex:
         if self==cn0 or other == cn0:
             return cn0         
         
-        res = cacheAvail
+        res = Complex(cacheAvail,cacheAvail.next)
         if self==cn1:
             res.r.val = other.r.val
             res.i.val = other.i.val
@@ -68,7 +68,7 @@ class Complex:
         if self == cn0:
             return cn0
         
-        res = cacheAvail
+        res = Complex(cacheAvail,cacheAvail.next)
         
         if other==cn1:
             res.r.val = self.r.val
@@ -92,19 +92,25 @@ class Complex:
     
     
     def __eq__(self,other):
-        if self.r == other.r and self.i == other.i:
-#             print(True,self,other,id(self.r),id(other.r),id(self)==id(other))
+        if self.r == other.r and self.i==other.i:
             return True
         else:
-#             print(False,self,other,id(self.r),id(other.r))
             return False
         
     def __str__(self):
         return str(self.r.val+1j*self.i.val)        
         
-cn0 = Complex(0)
-cn1 = Complex(1)
-cacheAvail = Complex()
+        
+zeroEntry = ComplexTableEntry(0) 
+oneEntry = ComplexTableEntry(1) 
+moneEntry = ComplexTableEntry(-1) 
+        
+cn0 = Complex(zeroEntry,zeroEntry)
+cn1 = Complex(oneEntry,zeroEntry)
+# cnm1 = Complex(moneEntry,zeroEntry)
+
+cacheAvail = ComplexTableEntry()
+Avail = ComplexTableEntry()
 
 def cn_mul(res:Complex, a:Complex, b:Complex):
     """res=a*b"""
@@ -132,9 +138,9 @@ def cn_mul(res:Complex, a:Complex, b:Complex):
 def cn_mulCached(a:Complex,b:Complex):
 #     res = getCachedComplex()
     global cacheAvail,cacheCount
-    res = cacheAvail
-    cacheAvail=cacheAvail.next
-    cacheCount-=1
+    res = Complex(cacheAvail,cacheAvail.next)
+    cacheAvail=cacheAvail.next.next
+    cacheCount-=2
     if equalsOne(a):
         res.r.val = b.r.val
         res.i.val = b.i.val
@@ -163,9 +169,9 @@ def cn_add(res:Complex, a:Complex, b:Complex):
 def cn_addCached(a:Complex,b:Complex):
 #     c = getCachedComplex()
     global cacheAvail,cacheCount
-    c = cacheAvail
-    cacheAvail=cacheAvail.next
-    cacheCount-=1
+    c = Complex(cacheAvail,cacheAvail.next)
+    cacheAvail=cacheAvail.next.next
+    cacheCount-=2
     c.r.val = a.r.val+b.r.val
     c.i.val = a.i.val+b.i.val
     return c
@@ -173,72 +179,140 @@ def cn_addCached(a:Complex,b:Complex):
 
         
 def Find_Or_Add_Complex_table(c : Complex):
+#     print('fc',c)
     if c==cn0:
         return cn0
     if c==cn1:
         return cn1
-    if abs(c.r.val-1)<epi and abs(c.i.val)<epi:
-        return cn1
-    if abs(c.r.val)<epi and abs(c.i.val)<epi:
-        return cn0    
     
-    key_r = int(c.r.val/epi)
-    key_i = int(c.i.val/epi)
+    val_r = c.r.val
+    val_i = c.i.val
+    abs_r = abs(val_r)
+    abs_i = abs(val_i)
+    
     res = Complex()
+    
+    if abs_i<epi:
+        if abs_r<epi:
+            return cn0
+        if abs(val_r-1)<epi:
+            return cn1
+        if abs(val_r+1)<epi:
+            return Complex(moneEntry,zeroEntry)
+        res.i = zeroEntry
+#         key_r = int(val_r/epi)
+        key_r=int(round(val_r/epi))
+        if not key_r in complex_table:
+#             temp_r = getComplexTableEntry()
+#             temp_r.val = val_r
+            temp_r = ComplexTableEntry(val_r)
+            complex_table[key_r] = temp_r
+            res.r = temp_r
+        else:
+            res.r=complex_table[key_r]
+        return res
+    
+    if abs_r<epi:
+        if abs(val_i-1) < epi:
+            return Complex(zeroEntry,oneEntry)
+        if abs(val_i+1)<epi:
+            return Complex(zeroEntry,moneEntry)
+        res.r = zeroEntry
+#         key_i = int(val_i/epi)
+        key_i=int(round(val_i/epi))
+        if not key_i in complex_table:
+#             temp_i = getComplexTableEntry()
+#             temp_i.val = val_i
+            temp_i = ComplexTableEntry(val_i)
+            complex_table[key_i] = temp_i
+            res.i = temp_i
+        else:
+            res.i=complex_table[key_i]
+        return res    
+    
+#     key_r = int(val_r/epi)
+#     key_i = int(val_i/epi)
+    key_r=int(round(val_r/epi))
+    key_i=int(round(val_i/epi))
+#     print('key',key_r,key_i)
     if not key_r in complex_table:
-        temp_r = ComplexTableEntry(c.r.val)
+#         temp_r = getComplexTableEntry()
+#         temp_r.val = val_r
+        temp_r = ComplexTableEntry(val_r)
         complex_table[key_r] = temp_r
         res.r = temp_r
     else:
-        res.r=complex_table[key_r]
+        res.r=complex_table[key_r]    
     if not key_i in complex_table:
-        temp_i = ComplexTableEntry(c.i.val)
+#         temp_i = getComplexTableEntry()
+#         temp_i.val = val_i
+        temp_i = ComplexTableEntry(val_i)
         complex_table[key_i] = temp_i
         res.i = temp_i
     else:
         res.i=complex_table[key_i]
-    return res
+#     print('fres',res)
+    return res 
 
+def getComplexTableEntry():
+    global Avail
+    c = Avail
+    Avail = c.next
+    return c
               
 def getCachedComplex():
     global cacheAvail,cacheCount
-    c = cacheAvail
-    cacheAvail=cacheAvail.next
-    cacheCount-=1
+    c = Complex(cacheAvail,cacheAvail.next)
+    cacheAvail=cacheAvail.next.next
+    cacheCount-=2
     return c
 
 def getCachedComplex2(r_val,i_val):
     global cacheAvail,cacheCount
-    c = cacheAvail
-    cacheAvail=cacheAvail.next
+    c = Complex(cacheAvail,cacheAvail.next)
+    cacheAvail=cacheAvail.next.next
+    cacheCount-=2
     c.r.val = r_val
     c.i.val = i_val
     cacheCount-=1
     return c
+
+def getTempCachedComplex():
+    return Complex(cacheAvail,cacheAvail.next)
+
+def getTempCachedComplex2(c:complex):
+    res = Complex(cacheAvail,cacheAvail.next)
+    res.r.val = c.real
+    res.i.val = c.imag
+    return res
+
+
 def releaseCached(c):
     global cacheAvail,cacheCount
-    c.next = cacheAvail
-    cacheAvail=c
-    cacheCount+=1
-    return c
-
+    c.i.next = cacheAvail
+    cacheAvail=c.r
+    cacheCount+=2
 
 def equalsZero(c):
-    return abs(c.r.val)<epi and abs(c.i.val)<epi
+    return c==cn0 or (abs(c.r.val)<epi and abs(c.i.val)<epi)
 
 def equalsOne(c):
-    return abs(c.r.val-1)<epi and abs(c.i.val)<epi
+    return c==cn1 or (abs(c.r.val-1)<epi and abs(c.i.val)<epi)
 
-def ini_complex(max_rank=100):
-    global cn0,cn1,complex_table,cacheCount,cacheAvail
+def ini_complex(cache_size=100,table_size=10000):
+    global complex_table,complex_entry_table,cacheCount,cacheAvail,Avail
     complex_table = dict()
-    cacheCount = max_rank
-    cacheAvail = cache_head = Complex()
+    cacheCount = cache_size
+    cache_head = cacheAvail
 #     print(cacheAvail)
-    for k in range(max_rank-1):
-        temp = Complex()
+    for k in range(2*cache_size-1):
+        temp = ComplexTableEntry()
         cache_head.next=temp
         cache_head=temp
+        
+#     table_head = Avail
+#     for k in range(cache_size-1):
+#         temp = ComplexTableEntry()
+#         table_head.next=temp
+#         table_head=temp
     
-    cn0 = Find_Or_Add_Complex_table(Complex(0))
-    cn1 = Find_Or_Add_Complex_table(Complex(1))

@@ -275,7 +275,7 @@ def get_index_order():
     
 def get_int_key(weight):
     """To transform a complex number to a tuple with int values"""
-    return (int(weight.r.val/epi) ,int(weight.i.val/epi))
+    return (int(round(weight.r.val/epi)) ,int(round(weight.i.val/epi)))
 
 def get_node_set(node,node_set=set()):
     """Only been used when counting the node number of a TDD"""
@@ -322,18 +322,18 @@ def normalize(x,the_successors,cached = False):
             the_successors[k]=TDD(terminal_node,cn0)    
     
     
-#     weigs_abs=[int(round(succ.weight.norm()/epi)) for succ in the_successors]
-#     max_pos = weigs_abs.index(max(weigs_abs))
-#     weig_max = the_successors[max_pos].weight
+    weigs_abs=[int(round(succ.weight.norm()/epi)) for succ in the_successors]
+    max_pos = weigs_abs.index(max(weigs_abs))
+    weig_max = the_successors[max_pos].weight
     
-    max_pos = 0
-    weig_max = the_successors[0].weight
-    weig_max_norm = weig_max.norm()
-    for k in range(1,len(the_successors)):
-        if the_successors[k].weight.norm() - weig_max_norm>epi:
-            max_pos=k
-            weig_max = the_successors[k].weight
-            weig_max_norm = weig_max.norm()
+#     max_pos = 0
+#     weig_max = the_successors[0].weight
+#     weig_max_norm = weig_max.norm()
+#     for k in range(1,len(the_successors)):
+#         if the_successors[k].weight.norm() - weig_max_norm>epi:
+#             max_pos=k
+#             weig_max = the_successors[k].weight
+#             weig_max_norm = weig_max.norm()
     
     if weig_max == cn0:
         return TDD(terminal_node,cn0)
@@ -499,7 +499,7 @@ def get_tdd2(U,var,idx_2_key=None):
     if sum(U.shape)==U_dim:
         for k in range(U_dim):
             U=U[0]
-        res=TDD(terminal_node,Find_Or_Add_Complex_table(Complex(U)))
+        res=TDD(terminal_node,Find_Or_Add_Complex_table(getTempCachedComplex2(U)))
         return res
      
     if not idx_2_key:
@@ -541,7 +541,7 @@ def np_2_tdd(U,order=[],key_width=True):
         
         for k in range(U_dim):
             U=U[0]
-        res=TDD(terminal_node,Find_Or_Add_Complex_table(Complex(U)))
+        res=TDD(terminal_node,Find_Or_Add_Complex_table(getTempCachedComplex2(U)))
         return res
     
     if not order:
@@ -583,7 +583,7 @@ def np_2_tdd2(U,split_pos=None):
     if sum(U_shape)==U_dim:
         for k in range(U_dim):
             U=U[0]
-        res=TDD(terminal_node,Find_Or_Add_Complex_table(Complex(U)))
+        res=TDD(terminal_node,Find_Or_Add_Complex_table(getTempCachedComplex2(U)))
         return res
     if split_pos==None:
         split_pos=U_dim-1
@@ -740,9 +740,8 @@ def contract(tdd1,tdd2,key_2_new_key,cont_order,cont_num):
     if k1==-1 and k2==-1:
         tdd=TDD(terminal_node,cn_mulCached(w1,w2))
         if cont_num>0:
-            cacheAvail.r.val=2**cont_num
-            cacheAvail.i.val=0
-            cn_mul(tdd.weight,tdd.weight,cacheAvail)
+            temp = getTempCachedComplex2(2**cont_num)
+            cn_mul(tdd.weight,tdd.weight,temp)
         return tdd
 
     if k1==-1:
@@ -754,8 +753,6 @@ def contract(tdd1,tdd2,key_2_new_key,cont_order,cont_num):
         if cont_num ==0 and key_2_new_key[0][k1]==k1:
             tdd=TDD(tdd1.node,cn_mulCached(w1,w2))
             return tdd
-    
-    
     
     tdd1.weight = cn1
     tdd2.weight = cn1
