@@ -299,7 +299,7 @@ def equalsZero(c):
 def equalsOne(c):
     return c==cn1 or (abs(c.r.val-1)<epi and abs(c.i.val)<epi)
 
-def ini_complex(cache_size=100,table_size=10000):
+def ini_complex(cache_size=500,table_size=10000):
     global complex_table,complex_entry_table,cacheCount,cacheAvail,Avail
     complex_table = dict()
     cacheCount = cache_size

@@ -212,7 +212,7 @@ def layout(node,key_2_idx,dot=None,succ=[],real_label=True):
     return dot        
 
         
-def Ini_TDD(index_order=[],max_rank=100):
+def Ini_TDD(index_order=[],max_rank=500):
     """To initialize the unique_table,computed_table and set up a global index order"""
     global unique_table,computed_table,terminal_node,global_node_idx
     global add_find_time,add_hit_time,cont_find_time,cont_hit_time
@@ -316,33 +316,53 @@ def Find_Or_Add_Unique_table(x,weigs=[],succ_nodes=[]):
 def normalize(x,the_successors,cached = False):
     """The normalize and reduce procedure"""
 
-    for k in range(0,len(the_successors)):
-        if equalsZero(the_successors[k].weight) and the_successors[k].weight!=cn0:
-            releaseCached(the_successors[k].weight)
-            the_successors[k]=TDD(terminal_node,cn0)    
+    m = len(the_successors)
+    is_zero=[equalsZero(the_successors[k].weight) for k in range(m)]
+    if cached:
+        for k in range(0,m):
+            if is_zero[k] and the_successors[k].weight!=cn0:
+                releaseCached(the_successors[k].weight)
+                the_successors[k].weight = cn0
+            
     
+#     weigs_abs=[int(round(succ.weight.norm()/epi)) for succ in the_successors]
+#     max_pos = weigs_abs.index(max(weigs_abs))
+#     weig_max = the_successors[max_pos].weight
     
-    weigs_abs=[int(round(succ.weight.norm()/epi)) for succ in the_successors]
-    max_pos = weigs_abs.index(max(weigs_abs))
-    weig_max = the_successors[max_pos].weight
+    max_pos = -1
+    weig_max = cn1
+    for k in range(m):
+        if is_zero[k]: continue
+        if max_pos == -1:
+            max_pos = k
+            weig_max = the_successors[k].weight
+            weig_max_norm = weig_max.norm()
+        else:
+            mag = the_successors[k].weight.norm()
+            if mag - weig_max_norm>epi:
+                max_pos=k
+                weig_max = the_successors[k].weight
+                weig_max_norm = mag
     
-#     max_pos = 0
-#     weig_max = the_successors[0].weight
-#     weig_max_norm = weig_max.norm()
-#     for k in range(1,len(the_successors)):
-#         if the_successors[k].weight.norm() - weig_max_norm>epi:
-#             max_pos=k
-#             weig_max = the_successors[k].weight
-#             weig_max_norm = weig_max.norm()
-    
-    if weig_max == cn0:
+    if max_pos == -1:
         return TDD(terminal_node,cn0)
             
-    weigs=[Find_Or_Add_Complex_table(succ.weight/weig_max) for succ in the_successors] 
+    weigs = []
+    for k in range(m):
+        if k==max_pos:
+            weigs.append(cn1)
+        else:
+            if the_successors[k].weight==cn0:
+                weigs.append(cn0)
+            elif (not cached) and equalsOne(weig_max):
+                weigs.append(the_successors[k].weight)
+            else:
+                weigs.append(Find_Or_Add_Complex_table(the_successors[k].weight/weig_max))
+    
     succ_nodes=[succ.node for succ in the_successors]
     
     all_equal=True
-    for k in range(1,len(the_successors)):
+    for k in range(1,m):
         if succ_nodes[k]!=succ_nodes[0]:
             all_equal=False
             break
@@ -367,7 +387,7 @@ def normalize(x,the_successors,cached = False):
         res=TDD(node,Find_Or_Add_Complex_table(weig_max))
         
     if cached:
-        for k in range(0,len(the_successors)):
+        for k in range(m):
             if k ==max_pos:
                 continue
             if the_successors[k].weight!=cn0 and the_successors[k].weight!=cn1:
