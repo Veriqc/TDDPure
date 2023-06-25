@@ -299,6 +299,9 @@ def equalsZero(c):
 def equalsOne(c):
     return c==cn1 or (abs(c.r.val-1)<epi and abs(c.i.val)<epi)
 
+def equals(a:Complex,b:Complex):
+    return (abs(a.r.val-b.r.val)<epi and abs(a.i.val-b.i.val)<epi)
+
 def ini_complex(cache_size=500,table_size=10000):
     global complex_table,complex_entry_table,cacheCount,cacheAvail,Avail
     complex_table = dict()
