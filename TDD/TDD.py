@@ -44,13 +44,13 @@ class Complex:
         self.next = None
         
     def __add__(self,other):
-        res = Complex()
+        res = cacheAvail
         res.r.val = self.r.val+other.r.val
         res.i.val = self.i.val+other.i.val
         return res
     
     def __sub__(self,other):
-        res = Complex()
+        res = cacheAvail
         res.r.val = self.r.val-other.r.val
         res.i.val = self.i.val-other.i.val
         return res    
@@ -60,7 +60,7 @@ class Complex:
         if self==cn0 or other == cn0:
             return cn0         
         
-        res = Complex()
+        res = cacheAvail
         if self==cn1:
             res.r.val = other.r.val
             res.i.val = other.i.val
@@ -89,7 +89,7 @@ class Complex:
         if self == cn0:
             return cn0
         
-        res = Complex()
+        res = cacheAvail
         
         if other==cn1:
             res.r.val = self.r.val
@@ -124,7 +124,73 @@ class Complex:
         return str(self.r.val+1j*self.i.val)        
         
 cn0 = Complex(0)
-cn1 = Complex(1)    
+cn1 = Complex(1)
+
+def cn_mul(res:Complex, a:Complex, b:Complex):
+    """res=a*b"""
+    if equalsOne(a):
+        res.r.val = b.r.val
+        res.i.val = b.i.val
+        return
+    if equalsOne(b):
+        res.r.val = a.r.val
+        res.i.val = a.i.val
+        return 
+    if equalsZero(a) or equalsZero(b):
+        res.r.val = 0
+        res.i.val = 0
+        return 
+
+    ar=a.r.val
+    ai=a.i.val
+    br=b.r.val
+    bi=b.i.val
+        
+    res.r.val = ar*br-ai*bi
+    res.i.val = ar*bi+ai*br
+
+def cn_mulCached(a:Complex,b:Complex):
+#     res = getCachedComplex()
+    global cacheAvail,cacheCount
+    res = cacheAvail
+    cacheAvail=cacheAvail.next
+    cacheCount-=1
+    if equalsOne(a):
+        res.r.val = b.r.val
+        res.i.val = b.i.val
+        return res
+    if equalsOne(b):
+        res.r.val = a.r.val
+        res.i.val = a.i.val
+        return res
+    if equalsZero(a) or equalsZero(b):
+        res.r.val = 0
+        res.i.val = 0
+        return res
+    ar=a.r.val
+    ai=a.i.val
+    br=b.r.val
+    bi=b.i.val
+    res.r.val = ar*br-ai*bi
+    res.i.val = ar*bi+ai*br
+    return res
+
+def cn_add(res:Complex, a:Complex, b:Complex):
+    """res=a*b"""
+    res.r.val = a.r.val+b.r.val
+    res.i.val = a.i.val+b.i.val
+
+def cn_addCached(a:Complex,b:Complex):
+#     c = getCachedComplex()
+    global cacheAvail,cacheCount
+    c = cacheAvail
+    cacheAvail=cacheAvail.next
+    cacheCount-=1
+    c.r.val = a.r.val+b.r.val
+    c.i.val = a.i.val+b.i.val
+    return c
+
+
         
 def Find_Or_Add_Complex_table(c : Complex):
     if c==cn0:
@@ -140,26 +206,41 @@ def Find_Or_Add_Complex_table(c : Complex):
     key_i = int(round(c.i.val/epi))
     res = Complex()
     if not key_r in complex_table:
-        complex_table[key_r] = ComplexTableEntry(c.r.val)
+        temp_r = ComplexTableEntry(c.r.val)
+        complex_table[key_r] = temp_r
+        res.r = temp_r
+    else:
+        res.r=complex_table[key_r]
     if not key_i in complex_table:
-        complex_table[key_i] = ComplexTableEntry(c.i.val)                  
-    res.r=complex_table[key_r]
-    res.i=complex_table[key_i]
+        temp_i = ComplexTableEntry(c.i.val)
+        complex_table[key_i] = temp_i
+        res.i = temp_i
+    else:
+        res.i=complex_table[key_i]
     return res
 
-def Find_Or_Add_Complex_cache(c : Complex):
-    key_r = int(round(c.r.val/epi))
-    key_i = int(round(c.i.val/epi))
-    res = Complex()
-    if not key_r in complex_cache:
-        complex_cache[key_r] = c.r
-    if not key_i in complex_cache:
-        complex_cache[key_i] = c.i                   
-    res.r = complex_cache[key_r]
-    res.i = complex_cache[key_i]
-    return res
+
+
+# def Find_Or_Add_Complex_cache(c : Complex):
+#     key_r = int(round(c.r.val/epi))
+#     key_i = int(round(c.i.val/epi))
+#     res = Complex()
+#     if not key_r in complex_cache:
+#         complex_cache[key_r] = c.r
+#     if not key_i in complex_cache:
+#         complex_cache[key_i] = c.i                   
+#     res.r = complex_cache[key_r]
+#     res.i = complex_cache[key_i]
+#     return res
               
-def getCachedComplex(r_val,i_val):
+def getCachedComplex():
+    global cacheAvail,cacheCount
+    c = cacheAvail
+    cacheAvail=cacheAvail.next
+    cacheCount-=1
+    return c
+
+def getCachedComplex2(r_val,i_val):
     global cacheAvail,cacheCount
     c = cacheAvail
     cacheAvail=cacheAvail.next
@@ -167,7 +248,6 @@ def getCachedComplex(r_val,i_val):
     c.i.val = i_val
     cacheCount-=1
     return c
-
 def releaseCached(c):
     global cacheAvail,cacheCount
     c.next = cacheAvail
@@ -178,6 +258,9 @@ def releaseCached(c):
 
 def equalsZero(c):
     return abs(c.r.val)<epi and abs(c.i.val)<epi
+
+def equalsOne(c):
+    return abs(c.r.val-1)<epi and abs(c.i.val)<epi
 
 class Index:
     """The index, here idx is used when there is a hyperedge"""
@@ -206,7 +289,7 @@ class Index:
 class Node:
     """To define the node of TDD"""
     def __init__(self,key,num=2):
-        self.idx = Complex(0)
+        self.idx = 0
         self.key = key
         self.succ_num=num
         self.out_weight=[cn1]*num
@@ -333,7 +416,7 @@ class TDD:
             b.pop(0)
             res=temp_tdd.get_amplitude(b)
             w=res*self.weight
-            return w.r.va+1j*w.i.val
+            return w.r.val+1j*w.i.val
             
     def sampling(self,k):
         res=[]
@@ -493,15 +576,14 @@ def normalize(x,the_successors,cached = False):
             the_successors[k]=TDD(terminal_node,cn0)    
     
     
-    weigs=[succ.weight for succ in the_successors]
-    weigs_abs=[weig.norm() for weig in weigs]
+    weigs_abs=[succ.weight.norm() for succ in the_successors]
     max_pos = weigs_abs.index(max(weigs_abs))
-    weig_max=weigs[max_pos]
+    weig_max=the_successors[max_pos].weight
     
     if weig_max == cn0:
         return TDD(terminal_node,cn0)
             
-    weigs=[Find_Or_Add_Complex_table(weig/weig_max) for weig in weigs] 
+    weigs=[Find_Or_Add_Complex_table(succ.weight/weig_max) for succ in the_successors] 
     succ_nodes=[succ.node for succ in the_successors]
     
     all_equal=True
@@ -514,14 +596,11 @@ def normalize(x,the_successors,cached = False):
             break            
     if all_equal:
         if not cached:
-#             print('503',the_successors[0].weight)
             return the_successors[0]
         if cached:
             for k in range(1,len(the_successors)):
                 if the_successors[k].weight!=cn0 and the_successors[k].weight!=cn1:
                     releaseCached(the_successors[k].weight)
-#         return TDD(succ_nodes[0],getCachedComplex(the_successors[k].weight.r.val,the_successors[k].weight.i.val))
-#             print('509',the_successors[0].weight)
             return the_successors[0]
     
     
@@ -595,13 +674,14 @@ def find_computed_table(item):
             if not (abs(item[1].weight.r.val-res[3])<epi and abs(item[1].weight.i.val-res[4])<epi):
                 return None
             if not (abs(item[2].weight.r.val-res[5])<epi and abs(item[2].weight.i.val-res[6])<epi):
-                return None            
-            tdd = TDD(res[2])
-            tdd.weight = Complex()
-            tdd.weight.r.val=res[0]
-            tdd.weight.i.val=res[1] 
+                return None
             add_hit_time+=1
-            return tdd
+            if abs(res[0])<epi and abs(res[1])<epi:
+                return TDD(terminal_node,cn0)
+            else:
+                tdd = TDD(res[2],getCachedComplex2(res[0],res[1]))
+                return tdd
+            
         the_key=(item[2].weight.r,item[2].weight.i,item[2].node,item[1].weight.r,item[1].weight.i,item[1].node)
         if computed_table['+'].__contains__(the_key):
             res = computed_table['+'][the_key]
@@ -609,32 +689,30 @@ def find_computed_table(item):
                 return None
             if not (abs(item[1].weight.r.val-res[5])<epi and abs(item[1].weight.i.val-res[6])<epi):
                 return None              
-            tdd = TDD(res[2])
-            tdd.weight = Complex()
-            tdd.weight.r.val=res[0]
-            tdd.weight.i.val=res[1] 
             add_hit_time+=1
-            return tdd
+            if abs(res[0])<epi and abs(res[1])<epi:
+                return TDD(terminal_node,cn0)
+            else:
+                tdd = TDD(res[2],getCachedComplex2(res[0],res[1]))
+                return tdd
     else:
         the_key=(item[1].node,item[2].node,item[3][0],item[3][1],item[4])
         cont_find_time+=1
         if computed_table['*'].__contains__(the_key):
             res = computed_table['*'][the_key]
-            tdd = TDD(res[2])
-            tdd.weight = Complex()
-            tdd.weight.r.val=res[0]
-            tdd.weight.i.val=res[1] 
-            cont_hit_time+=1            
-            return tdd
+            if abs(res[0])<epi and abs(res[1])<epi:
+                return TDD(terminal_node,cn0)
+            else:
+                tdd = TDD(res[2],getCachedComplex2(res[0],res[1]))
+                return tdd
         the_key=(item[2].node,item[1].node,item[3][1],item[3][0],item[4])
         if computed_table['*'].__contains__(the_key):
             res = computed_table['*'][the_key]
-            tdd = TDD(res[2])
-            tdd.weight = Complex()
-            tdd.weight.r.val=res[0]
-            tdd.weight.i.val=res[1] 
-            cont_hit_time+=1            
-            return tdd
+            if abs(res[0])<epi and abs(res[1])<epi:
+                return TDD(terminal_node,cn0)
+            else:
+                tdd = TDD(res[2],getCachedComplex2(res[0],res[1]))
+                return tdd
     return None
 
 def insert_2_computed_table(item,res):
@@ -931,25 +1009,21 @@ def contract(tdd1,tdd2,key_2_new_key,cont_order,cont_num):
         return TDD(terminal_node,cn0)    
     
     if k1==-1 and k2==-1:
-        tdd=TDD(terminal_node)
-        tdd.weight = w1*w2
+        tdd=TDD(terminal_node,cn_mulCached(w1,w2))
         if cont_num>0:
-            tdd.weight*=Complex(2**cont_num)
-        tdd.weight=getCachedComplex(tdd.weight.r.val,tdd.weight.i.val)
+            cacheAvail.r.val=2**cont_num
+            cacheAvail.i.val=0
+            cn_mul(tdd.weight,tdd.weight,cacheAvail)
         return tdd
 
     if k1==-1:
         if cont_num ==0 and key_2_new_key[1][k2]==k2:
-            tdd=TDD(tdd2.node)
-            tdd.weight=w1*w2
-            tdd.weight=getCachedComplex(tdd.weight.r.val,tdd.weight.i.val)
+            tdd=TDD(tdd2.node,cn_mulCached(w1,w2))
             return tdd
             
     if k2==-1:      
         if cont_num ==0 and key_2_new_key[0][k1]==k1:
-            tdd=TDD(tdd1.node)
-            tdd.weight = w1*w2
-            tdd.weight=getCachedComplex(tdd.weight.r.val,tdd.weight.i.val)
+            tdd=TDD(tdd1.node,cn_mulCached(w1,w2))
             return tdd
     
     
@@ -961,16 +1035,16 @@ def contract(tdd1,tdd2,key_2_new_key,cont_order,cont_num):
     temp_key_2_new_key.append(tuple([k for k in key_2_new_key[0][:(k1+1)]]))
     temp_key_2_new_key.append(tuple([k for k in key_2_new_key[1][:(k2+1)]]))
     
-    tdd=find_computed_table(['*',tdd1,tdd2,temp_key_2_new_key,cont_num])
+    tdd = find_computed_table(['*',tdd1,tdd2,temp_key_2_new_key,cont_num])
     if tdd:
         tdd1.weight=w1
         tdd2.weight=w2
-        if equalsZero(tdd.weight):
-            return TDD(terminal_node,cn0)        
-        tdd.weight=tdd.weight*w1*w2
-        if equalsZero(tdd.weight):
-            return TDD(terminal_node,cn0) 
-        tdd.weight=getCachedComplex(tdd.weight.r.val,tdd.weight.i.val)
+        if not tdd.weight==cn0:
+            cn_mul(tdd.weight,tdd.weight,w1)
+            cn_mul(tdd.weight,tdd.weight,w2)
+            if equalsZero(tdd.weight):
+                releaseCached(tdd.weight)
+                return TDD(terminal_node,cn0)
         return tdd
                 
     if cont_order[0][k1]<cont_order[1][k2]:
@@ -1038,14 +1112,10 @@ def contract(tdd1,tdd2,key_2_new_key,cont_order,cont_num):
 
     if not tdd.weight==cn0 and (w1!=cn1 or w2!=cn1):
         if tdd.weight==cn1:
-            temp = w1*w2
-            tdd.weight=getCachedComplex(temp.r.val,temp.i.val)
+            tdd.weight = cn_mulCached(w1,w2)
         else:
-            temp = tdd.weight*w1*w2
-#             print('a',tdd.weight)
-            tdd.weight.r.val = temp.r.val
-            tdd.weight.i.val = temp.i.val
-#             print('b',tdd.weight)
+            cn_mul(tdd.weight,tdd.weight,w1)
+            cn_mul(tdd.weight,tdd.weight,w2)
         if equalsZero(tdd.weight):
             releaseCached(tdd.weight)
             return TDD(terminal_node,cn0)
@@ -1090,8 +1160,7 @@ def Slicing2(tdd,x,c):
         if tdd.node.out_weight[c]==cn0:
             res.weight=cn0
             return res
-        res.weight=tdd.node.out_weight[c]*tdd.weight
-        res.weight=getCachedComplex(res.weight.r.val,res.weight.i.val)
+        res.weight=cn_mulCached(tdd.node.out_weight[c],tdd.weight)
         return res
     else:
         print("Not supported yet!!!")        
@@ -1099,7 +1168,6 @@ def Slicing2(tdd,x,c):
         
 
 def add(tdd1,tdd2):
-    """The apply function of two TDDs. Mostly, it is used to do addition here."""
     global cn0, cn1
 
     k1=tdd1.node.key
@@ -1109,29 +1177,24 @@ def add(tdd1,tdd2):
         if tdd2.weight==cn0:
             return TDD(terminal_node,cn0)
         else:
-            res = TDD(tdd2.node)
-            res.weight = getCachedComplex(tdd2.weight.r.val,tdd2.weight.i.val)
+            res = TDD(tdd2.node,getCachedComplex2(tdd2.weight.r.val,tdd2.weight.i.val))
             return res        
     
     if tdd2.weight == cn0:
-        res = TDD(tdd1.node)
-        res.weight = getCachedComplex(tdd1.weight.r.val,tdd1.weight.i.val)
+        res = TDD(tdd1.node,getCachedComplex2(tdd1.weight.r.val,tdd1.weight.i.val))
         return res
     
     if tdd1.node==tdd2.node:
-        weig=tdd1.weight+tdd2.weight
+        weig=cn_addCached(tdd1.weight,tdd2.weight)
         if equalsZero(weig):
+            releaseCached(weig)
             return TDD(terminal_node,cn0)
         else:
-            res=TDD(tdd1.node)
-            res.weight = getCachedComplex(weig.r.val,weig.i.val)
+            res=TDD(tdd1.node,weig)
             return res
         
-    if find_computed_table(['+',tdd1,tdd2]):
-        res = find_computed_table(['+',tdd1,tdd2])
-        if equalsZero(res.weight):
-            return TDD(terminal_node,cn0)
-        res.weight=getCachedComplex(res.weight.r.val,res.weight.i.val)
+    res = find_computed_table(['+',tdd1,tdd2])
+    if res:
         return res
     
     the_successors=[]
