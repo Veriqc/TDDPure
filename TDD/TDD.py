@@ -2,8 +2,7 @@ import numpy as np
 import copy
 import time
 import random
-from graphviz import Digraph
-from IPython.display import Image
+from TDD.ComplexTable import *
 
 """Define global variables"""
 computed_table = dict()
@@ -14,240 +13,10 @@ add_find_time=0
 add_hit_time=0
 cont_find_time=0
 cont_hit_time=0
-epi=1e-5
+add_hit_time2=0
+# epi=1e-5
 
 terminal_node = None
-
-complex_table = dict()
-
-complex_entry_table =dict()
-
-cacheCount = 1
-
-cacheAvail = []
-
-# complex_cache = []
-
-
-class ComplexTableEntry:
-    def __init__(self,val=0):
-        self.val = val
-        
-
-    def __str__(self):
-        return str(val)
-        
-class Complex:
-    def __init__(self,c=0):
-        self.r = ComplexTableEntry(c.real)
-        self.i = ComplexTableEntry(c.imag)
-        self.next = None
-        
-    def __add__(self,other):
-        res = cacheAvail
-        res.r.val = self.r.val+other.r.val
-        res.i.val = self.i.val+other.i.val
-        return res
-    
-    def __sub__(self,other):
-        res = cacheAvail
-        res.r.val = self.r.val-other.r.val
-        res.i.val = self.i.val-other.i.val
-        return res    
-    
-    def __mul__(self,other):
-        
-        if self==cn0 or other == cn0:
-            return cn0         
-        
-        res = cacheAvail
-        if self==cn1:
-            res.r.val = other.r.val
-            res.i.val = other.i.val
-            return res
-        
-        if other==cn1:
-            res.r.val = self.r.val
-            res.i.val = self.i.val
-            return res
-    
-    
-        ar=self.r.val
-        ai=self.i.val
-        br=other.r.val
-        bi=other.i.val
-        
-        res.r.val = ar*br-ai*bi
-        res.i.val = ar*bi+ai*br
-        return res
-    
-    def __truediv__(self,other):
-        
-        if self==other:
-            return cn1
-        
-        if self == cn0:
-            return cn0
-        
-        res = cacheAvail
-        
-        if other==cn1:
-            res.r.val = self.r.val
-            res.i.val = self.i.val
-            return res        
-        
-        ar=self.r.val
-        ai=self.i.val
-        br=other.r.val
-        bi=other.i.val
-        
-        cmag = br*br+bi*bi
-        res.r.val = (ar*br+ai*bi)/cmag
-        res.i.val = (ai*br-ar*bi)/cmag
-        return res   
-    
-    def norm(self):
-        ar=self.r.val
-        ai=self.i.val
-        return ar*ar+ai*ai
-    
-    
-    def __eq__(self,other):
-        if self.r == other.r and self.i == other.i:
-#             print(True,self,other,id(self.r),id(other.r),id(self)==id(other))
-            return True
-        else:
-#             print(False,self,other,id(self.r),id(other.r))
-            return False
-        
-    def __str__(self):
-        return str(self.r.val+1j*self.i.val)        
-        
-cn0 = Complex(0)
-cn1 = Complex(1)
-
-def cn_mul(res:Complex, a:Complex, b:Complex):
-    """res=a*b"""
-    if equalsOne(a):
-        res.r.val = b.r.val
-        res.i.val = b.i.val
-        return
-    if equalsOne(b):
-        res.r.val = a.r.val
-        res.i.val = a.i.val
-        return 
-    if equalsZero(a) or equalsZero(b):
-        res.r.val = 0
-        res.i.val = 0
-        return 
-
-    ar=a.r.val
-    ai=a.i.val
-    br=b.r.val
-    bi=b.i.val
-        
-    res.r.val = ar*br-ai*bi
-    res.i.val = ar*bi+ai*br
-
-def cn_mulCached(a:Complex,b:Complex):
-#     res = getCachedComplex()
-    global cacheAvail,cacheCount
-    res = cacheAvail
-    cacheAvail=cacheAvail.next
-    cacheCount-=1
-    if equalsOne(a):
-        res.r.val = b.r.val
-        res.i.val = b.i.val
-        return res
-    if equalsOne(b):
-        res.r.val = a.r.val
-        res.i.val = a.i.val
-        return res
-    if equalsZero(a) or equalsZero(b):
-        res.r.val = 0
-        res.i.val = 0
-        return res
-    ar=a.r.val
-    ai=a.i.val
-    br=b.r.val
-    bi=b.i.val
-    res.r.val = ar*br-ai*bi
-    res.i.val = ar*bi+ai*br
-    return res
-
-def cn_add(res:Complex, a:Complex, b:Complex):
-    """res=a*b"""
-    res.r.val = a.r.val+b.r.val
-    res.i.val = a.i.val+b.i.val
-
-def cn_addCached(a:Complex,b:Complex):
-#     c = getCachedComplex()
-    global cacheAvail,cacheCount
-    c = cacheAvail
-    cacheAvail=cacheAvail.next
-    cacheCount-=1
-    c.r.val = a.r.val+b.r.val
-    c.i.val = a.i.val+b.i.val
-    return c
-
-
-        
-def Find_Or_Add_Complex_table(c : Complex):
-    if c==cn0:
-        return cn0
-    if c==cn1:
-        return cn1
-    if abs(c.r.val-1)<epi and abs(c.i.val)<epi:
-        return cn1
-    if abs(c.r.val)<epi and abs(c.i.val)<epi:
-        return cn0    
-    
-    key_r = int(round(c.r.val/epi))
-    key_i = int(round(c.i.val/epi))
-    res = Complex()
-    if not key_r in complex_table:
-        temp_r = ComplexTableEntry(c.r.val)
-        complex_table[key_r] = temp_r
-        res.r = temp_r
-    else:
-        res.r=complex_table[key_r]
-    if not key_i in complex_table:
-        temp_i = ComplexTableEntry(c.i.val)
-        complex_table[key_i] = temp_i
-        res.i = temp_i
-    else:
-        res.i=complex_table[key_i]
-    return res
-
-              
-def getCachedComplex():
-    global cacheAvail,cacheCount
-    c = cacheAvail
-    cacheAvail=cacheAvail.next
-    cacheCount-=1
-    return c
-
-def getCachedComplex2(r_val,i_val):
-    global cacheAvail,cacheCount
-    c = cacheAvail
-    cacheAvail=cacheAvail.next
-    c.r.val = r_val
-    c.i.val = i_val
-    cacheCount-=1
-    return c
-def releaseCached(c):
-    global cacheAvail,cacheCount
-    c.next = cacheAvail
-    cacheAvail=c
-    cacheCount+=1
-    return c
-
-
-def equalsZero(c):
-    return abs(c.r.val)<epi and abs(c.i.val)<epi
-
-def equalsOne(c):
-    return abs(c.r.val-1)<epi and abs(c.i.val)<epi
 
 class Index:
     """The index, here idx is used when there is a hyperedge"""
@@ -316,6 +85,8 @@ class TDD:
         return temp
     
     def show(self,real_label=True):
+        from graphviz import Digraph
+        from IPython.display import Image
         edge=[]              
         dot=Digraph(name='reduced_tree')
         dot=layout(self.node,self.key_2_index,dot,edge,real_label)
@@ -420,7 +191,7 @@ class TDD:
         else:
             return False
         
-def layout(node,key_2_idx,dot=Digraph(),succ=[],real_label=True):
+def layout(node,key_2_idx,dot=None,succ=[],real_label=True):
     col=['red','blue','black','green']
     if real_label and node.key in key_2_idx:
         if node.key==-1:
@@ -445,7 +216,7 @@ def Ini_TDD(index_order=[],max_rank=100):
     """To initialize the unique_table,computed_table and set up a global index order"""
     global unique_table,computed_table,terminal_node,global_node_idx
     global add_find_time,add_hit_time,cont_find_time,cont_hit_time
-    global cn0, cn1,complex_table,complex_cache,cacheCount,cacheAvail
+
     global_node_idx=0
     unique_table = dict()
     computed_table = {'+': dict(),'*': dict()}
@@ -454,17 +225,7 @@ def Ini_TDD(index_order=[],max_rank=100):
     cont_find_time=0
     cont_hit_time=0
     set_index_order(index_order)
-    complex_table = dict()
-    cacheCount = max_rank
-    cacheAvail = cache_head=Complex()
-    
-    for k in range(max_rank-1):
-        temp = Complex()
-        cache_head.next=temp
-        cache_head=temp
-    
-    cn0 = Find_Or_Add_Complex_table(Complex(0))
-    cn1 = Find_Or_Add_Complex_table(Complex(1))
+    ini_complex(max_rank)
     terminal_node = Find_Or_Add_Unique_table(-1)
     return get_identity_tdd()
 
@@ -514,8 +275,7 @@ def get_index_order():
     
 def get_int_key(weight):
     """To transform a complex number to a tuple with int values"""
-    global epi
-    return (int(round(weight.real/epi)) ,int(round(weight.imag/epi)))
+    return (int(weight.r.val/epi) ,int(weight.i.val/epi))
 
 def get_node_set(node,node_set=set()):
     """Only been used when counting the node number of a TDD"""
@@ -555,8 +315,7 @@ def Find_Or_Add_Unique_table(x,weigs=[],succ_nodes=[]):
 
 def normalize(x,the_successors,cached = False):
     """The normalize and reduce procedure"""
-    global epi
-#     print('475',x,the_successors[0].weight,the_successors[1].weight)
+
     for k in range(0,len(the_successors)):
         if equalsZero(the_successors[k].weight) and the_successors[k].weight!=cn0:
             releaseCached(the_successors[k].weight)
@@ -617,42 +376,6 @@ def normalize(x,the_successors,cached = False):
     return res
               
               
-def incRef(tdd):
-    if tdd.node.key==-1:
-        return
-    
-    tdd.node.ref_num+=1
-    
-    if tdd.node.ref_num==1:
-        for k in range(tdd1.node.succ_num):
-            incRef(Slicing(tdd,tdd.node.key,k))
-            
-def decRef(tdd):
-    if tdd.node.key==-1:
-        return
-    
-    if tdd.node.ref_num==1:
-        print('Error In defRef')
-    
-    tdd.node.ref_num-=1
-    
-    if tdd.node.ref_num==0:
-        for k in range(tdd1.node.succ_num):
-            decRef(Slicing(tdd,tdd.node.key,k))            
-    
-    
-
-def garbageCollect():
-    global computed_table
-    global unique_table
-    temp_unique_table = dict()
-    for item in unique_table:
-        if not unique_table[item].ref_num==0:
-            temp_unique_table[item] = unique_table[item]
-    
-    unique_table.clear()
-    
-    unique_table = temp_unique_table              
 
 def get_count():
     global add_find_time,add_hit_time,cont_find_time,cont_hit_time
@@ -661,16 +384,21 @@ def get_count():
 
 def find_computed_table(item):
     """To return the results that already exist"""
-    global computed_table,add_find_time,add_hit_time,cont_find_time,cont_hit_time
+    global computed_table,add_find_time,add_hit_time,cont_find_time,cont_hit_time,add_hit_time2
     if item[0] == '+':
-        the_key=(item[1].weight.r,item[1].weight.i,item[1].node,item[2].weight.r,item[2].weight.i,item[2].node)
+        key1=get_int_key(item[1].weight)
+        key2=get_int_key(item[2].weight)
+        the_key=(key1,item[1].node,key2,item[2].node)
         add_find_time+=1
         if computed_table['+'].__contains__(the_key):
+#             add_hit_time2+=1
             res = computed_table['+'][the_key]
-            if not (abs(item[1].weight.r.val-res[3])<epi and abs(item[1].weight.i.val-res[4])<epi):
-                return None
-            if not (abs(item[2].weight.r.val-res[5])<epi and abs(item[2].weight.i.val-res[6])<epi):
-                return None
+#             if not (abs(item[1].weight.r.val-res[3])<epi and abs(item[1].weight.i.val-res[4])<epi):
+#                 if add_hit_time2<10:
+#                     print(item[1].weight.r.val,item[1].weight.i.val,item[2].weight.r.val,item[2].weight.i.val,res[3],res[4],res[5],res[6])
+#                 return None
+#             if not (abs(item[2].weight.r.val-res[5])<epi and abs(item[2].weight.i.val-res[6])<epi):
+#                 return None
             add_hit_time+=1
             if abs(res[0])<epi and abs(res[1])<epi:
                 return TDD(terminal_node,cn0)
@@ -678,13 +406,14 @@ def find_computed_table(item):
                 tdd = TDD(res[2],getCachedComplex2(res[0],res[1]))
                 return tdd
             
-        the_key=(item[2].weight.r,item[2].weight.i,item[2].node,item[1].weight.r,item[1].weight.i,item[1].node)
+        the_key=(key2,item[2].node,key1,item[1].node)
         if computed_table['+'].__contains__(the_key):
+#             add_hit_time2+=1
             res = computed_table['+'][the_key]
-            if not (abs(item[2].weight.r.val-res[3])<epi and abs(item[2].weight.i.val-res[4])<epi):
-                return None
-            if not (abs(item[1].weight.r.val-res[5])<epi and abs(item[1].weight.i.val-res[6])<epi):
-                return None              
+#             if not (abs(item[2].weight.r.val-res[3])<epi and abs(item[2].weight.i.val-res[4])<epi):
+#                 return None
+#             if not (abs(item[1].weight.r.val-res[5])<epi and abs(item[1].weight.i.val-res[6])<epi):
+#                 return None              
             add_hit_time+=1
             if abs(res[0])<epi and abs(res[1])<epi:
                 return TDD(terminal_node,cn0)
@@ -696,6 +425,7 @@ def find_computed_table(item):
         cont_find_time+=1
         if computed_table['*'].__contains__(the_key):
             res = computed_table['*'][the_key]
+            cont_hit_time+=1
             if abs(res[0])<epi and abs(res[1])<epi:
                 return TDD(terminal_node,cn0)
             else:
@@ -703,6 +433,7 @@ def find_computed_table(item):
                 return tdd
         the_key=(item[2].node,item[1].node,item[3][1],item[3][0],item[4])
         if computed_table['*'].__contains__(the_key):
+            cont_hit_time+=1
             res = computed_table['*'][the_key]
             if abs(res[0])<epi and abs(res[1])<epi:
                 return TDD(terminal_node,cn0)
@@ -716,8 +447,10 @@ def insert_2_computed_table(item,res):
     global computed_table,cont_time,find_time,hit_time
 
     if item[0] == '+':
-        the_key = (item[1].weight.r,item[1].weight.i,item[1].node,item[2].weight.r,item[2].weight.i,item[2].node)
-        computed_table['+'][the_key] = (res.weight.r.val,res.weight.i.val,res.node,item[1].weight.r.val,item[1].weight.i.val,item[2].weight.r.val,item[2].weight.i.val)
+        key1=get_int_key(item[1].weight)
+        key2=get_int_key(item[2].weight)        
+        the_key = (key1,item[1].node,key2,item[2].node)
+        computed_table['+'][the_key] = (res.weight.r.val,res.weight.i.val,res.node)
     else:
         the_key = (item[1].node,item[2].node,item[3][0],item[3][1],item[4])
         computed_table['*'][the_key] = (res.weight.r.val,res.weight.i.val,res.node)
@@ -925,7 +658,7 @@ def get_measure_prob(tdd):
 
     
 def cont(tdd1,tdd2):
-    global cacheCount
+
     var_cont=[var for var in tdd1.index_set if var in tdd2.index_set]
     var_out1=[var for var in tdd1.index_set if not var in var_cont]
     var_out2=[var for var in tdd2.index_set if not var in var_cont]
@@ -995,7 +728,7 @@ def cont(tdd1,tdd2):
 
 def contract(tdd1,tdd2,key_2_new_key,cont_order,cont_num):
     """The contraction of two TDDs, var_cont is in the form [[4,1],[3,2]]"""
-    global cn0, cn1
+
     k1=tdd1.node.key
     k2=tdd2.node.key
     w1=tdd1.weight
@@ -1009,9 +742,7 @@ def contract(tdd1,tdd2,key_2_new_key,cont_order,cont_num):
         if cont_num>0:
             cacheAvail.r.val=2**cont_num
             cacheAvail.i.val=0
-#             temp = getCachedComplex2(2**cont_num,0)
             cn_mul(tdd.weight,tdd.weight,cacheAvail)
-#             releaseCached(temp)
         return tdd
 
     if k1==-1:
@@ -1164,7 +895,6 @@ def Slicing2(tdd,x,c):
         
 
 def add(tdd1,tdd2):
-    global cn0, cn1
 
     k1=tdd1.node.key
     k2=tdd2.node.key
@@ -1229,3 +959,41 @@ def add(tdd1,tdd2):
 #     print('add 1139',x,res.weight)
     insert_2_computed_table(['+',tdd1,tdd2],res)
     return res
+
+
+def incRef(tdd):
+    if tdd.node.key==-1:
+        return
+    
+    tdd.node.ref_num+=1
+    
+    if tdd.node.ref_num==1:
+        for k in range(tdd1.node.succ_num):
+            incRef(Slicing(tdd,tdd.node.key,k))
+            
+def decRef(tdd):
+    if tdd.node.key==-1:
+        return
+    
+    if tdd.node.ref_num==1:
+        print('Error In defRef')
+    
+    tdd.node.ref_num-=1
+    
+    if tdd.node.ref_num==0:
+        for k in range(tdd1.node.succ_num):
+            decRef(Slicing(tdd,tdd.node.key,k))            
+    
+    
+
+def garbageCollect():
+    global computed_table
+    global unique_table
+    temp_unique_table = dict()
+    for item in unique_table:
+        if not unique_table[item].ref_num==0:
+            temp_unique_table[item] = unique_table[item]
+    
+    unique_table.clear()
+    
+    unique_table = temp_unique_table              
