@@ -857,7 +857,7 @@ def contract(tdd1,tdd2,key_2_new_key1,key_2_new_key2,cont_num):
             tdd=normalize(new_key1,the_successors,True)
         else:
             tdd=TDD(terminal_node,cn0)
-            for k in range(tdd11.node.succ_num):
+            for k in range(tdd1.node.succ_num):
                 e1 = TDD(tdd1.node.succ[k],tdd1.node.out_weight[k])
                 res=contract(e1,tdd2,key_2_new_key1.father,temp_key_2_new_key2,cont_num-1)
                 if tdd.weight==cn0:
