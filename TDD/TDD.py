@@ -14,6 +14,8 @@ add_hit_time=0
 cont_find_time=0
 cont_hit_time=0
 add_hit_time2=0
+add_times = 0
+cont_times = 0
 # epi=1e-5
 
 terminal_node = None
@@ -48,8 +50,8 @@ class Node:
         self.key = key
         self.succ_num = num
         self.id = None
-        self.out_weight = None #suppose to be a list of lenth num
-        self.succ = None #suppose to be a list of lenth num
+        self.out_weight = None #suppose to be a list of length num
+        self.succ = None #suppose to be a list of length num
         self.ref_num = None
 
 
@@ -205,14 +207,16 @@ def layout(node,key_2_idx,dot=None,succ=[],real_label=True):
 def Ini_TDD(index_order=[],max_rank=200):
     """To initialize the unique_table,computed_table and set up a global index order"""
     global unique_table,computed_table,terminal_node,global_node_idx
-    global add_find_time,add_hit_time,cont_find_time,cont_hit_time
+    global add_find_time,add_hit_time,cont_find_time,cont_hit_time,add_times,cont_times
 
     global_node_idx=0
     add_find_time=0
     add_hit_time=0
     cont_find_time=0
     cont_hit_time=0
-    
+    add_times = 0
+    cont_times = 0
+
     unique_table = {k:dict() for k in range(max_rank)}
     computed_table = dict()
     computed_table['+'] = {k:{k1: dict() for k1 in range(-1,max_rank)} for k in range(-1,max_rank)}
@@ -389,28 +393,37 @@ def normalize(x,the_successors,cached = False):
               
 
 def get_count():
-    global add_find_time,add_hit_time,cont_find_time,cont_hit_time
+    global add_find_time,add_hit_time,cont_find_time,cont_hit_time,add_times,cont_times
     print("add:",add_hit_time,'/',add_find_time,'/',add_hit_time/add_find_time)
     print("cont:",cont_hit_time,"/",cont_find_time,"/",cont_hit_time/cont_find_time)
+    print('add:',add_times,'cont:',cont_times)
 
+ttt_table = dict()
+
+ttt_table2 = dict()
+
+ttt_n = 0
+
+ttt_n2 = 0    
+    
 def find_computed_table(item):
     """To return the results that already exist"""
     global computed_table,add_find_time,add_hit_time,cont_find_time,cont_hit_time,add_hit_time2
     if item[0] == '+':
-        add_find_time+=1
-        if item[1].node.id > item[2].node.id:
-            the_key=(get_int_key(item[2].weight),item[2].node,get_int_key(item[1].weight),item[1].node)
-            k1 = item[2].node.key
-            k2 = item[1].node.key
-            if the_key in computed_table['+'][item[2].node.key][item[1].node.key]:
-                res = computed_table['+'][item[2].node.key][item[1].node.key][the_key]
-                add_hit_time+=1
-                if abs(res[0])<epi and abs(res[1])<epi:
-                    return TDD(terminal_node,cn0)
-                else:
-                    tdd = TDD(res[2],getCachedComplex2(res[0],res[1]))
-                    return tdd            
-        else:
+            add_find_time+=1
+#         if item[1].node.id > item[2].node.id:
+#             the_key=(get_int_key(item[2].weight),item[2].node,get_int_key(item[1].weight),item[1].node)
+#             k1 = item[2].node.key
+#             k2 = item[1].node.key
+#             if the_key in computed_table['+'][item[2].node.key][item[1].node.key]:
+#                 res = computed_table['+'][item[2].node.key][item[1].node.key][the_key]
+#                 add_hit_time+=1
+#                 if abs(res[0])<epi and abs(res[1])<epi:
+#                     return TDD(terminal_node,cn0)
+#                 else:
+#                     tdd = TDD(res[2],getCachedComplex2(res[0],res[1]))
+#                     return tdd            
+#         else:
             the_key=(get_int_key(item[1].weight),item[1].node,get_int_key(item[2].weight),item[2].node)
             if the_key in computed_table['+'][item[1].node.key][item[2].node.key]:
                 res = computed_table['+'][item[1].node.key][item[2].node.key][the_key]
@@ -422,10 +435,16 @@ def find_computed_table(item):
                     return tdd
     else:
         cont_find_time+=1
+        
         if item[1].node.id > item[2].node.id:
             the_key=(item[2].node,item[1].node,item[4],item[3],item[5])
+            
+            if not the_key in ttt_table:
+                ttt_table[the_key]=0
+            
             if computed_table['*'][item[2].node.key][item[1].node.key].__contains__(the_key):
                 res = computed_table['*'][item[2].node.key][item[1].node.key][the_key]
+                ttt_table[the_key]+=1
                 cont_hit_time+=1
                 if abs(res[0])<epi and abs(res[1])<epi:
                     return TDD(terminal_node,cn0)
@@ -434,8 +453,13 @@ def find_computed_table(item):
                     return tdd
         else: 
             the_key=(item[1].node,item[2].node,item[3],item[4],item[5])
+            
+            if not the_key in ttt_table:
+                ttt_table[the_key]=0            
+            
             if computed_table['*'][item[1].node.key][item[2].node.key].__contains__(the_key):
                 res = computed_table['*'][item[1].node.key][item[2].node.key][the_key]
+                ttt_table[the_key]+=1
                 cont_hit_time+=1
                 if abs(res[0])<epi and abs(res[1])<epi:
                     return TDD(terminal_node,cn0)
@@ -449,15 +473,54 @@ def insert_2_computed_table(item,res):
     global computed_table,cont_time,find_time,hit_time
 
     if item[0] == '+':
-        if item[1].node.id>item[2].node.id:
-            computed_table['+'][item[2].node.key][item[1].node.key][(get_int_key(item[2].weight) ,item[2].node,get_int_key(item[1].weight),item[1].node)] = (res.weight.r.val,res.weight.i.val,res.node)
-        else:
+        
+#         global ttt_table2,ttt_n2
+#         h = hash((get_int_key(item[2].weight),item[2].node,get_int_key(item[1].weight),item[1].node))
+#         if not h in ttt_table2:
+#             ttt_table2[h]=(get_int_key(item[2].weight),item[2].node,get_int_key(item[1].weight),item[1].node)
+#         else:
+#             if ttt_table2[h] != (get_int_key(item[2].weight),item[2].node,get_int_key(item[1].weight),item[1].node):
+#                 ttt_n2+=1
+#                 ttt_table2[h] = (get_int_key(item[2].weight),item[2].node,get_int_key(item[1].weight),item[1].node)
+                
+#         h = hash((get_int_key(item[1].weight),item[1].node,get_int_key(item[2].weight),item[2].node))
+#         if not h in ttt_table2:
+#             ttt_table2[h]=(get_int_key(item[1].weight),item[1].node,get_int_key(item[2].weight),item[2].node)
+#         else:
+#             if ttt_table2[h] != (get_int_key(item[1].weight),item[1].node,get_int_key(item[2].weight),item[2].node):
+#                 ttt_n2+=1
+#                 ttt_table2[h] = (get_int_key(item[1].weight),item[1].node,get_int_key(item[2].weight),item[2].node)                
+        
+#         if item[1].node.id>item[2].node.id:
+#             computed_table['+'][item[2].node.key][item[1].node.key][(get_int_key(item[2].weight) ,item[2].node,get_int_key(item[1].weight),item[1].node)] = (res.weight.r.val,res.weight.i.val,res.node)
+#         else:
             computed_table['+'][item[1].node.key][item[2].node.key][(get_int_key(item[1].weight),item[1].node,get_int_key(item[2].weight) ,item[2].node)] = (res.weight.r.val,res.weight.i.val,res.node)
     else:
+#         global ttt_table,ttt_n
+#         h = hash((item[1].node,item[2].node,item[3],item[4],item[5]))
+#         if not h in ttt_table:
+#             ttt_table[h]=(item[1].node,item[2].node,item[3],item[4],item[5])
+#         else:
+#             if ttt_table[h] != (item[1].node,item[2].node,item[3],item[4],item[5]):
+#                 ttt_n+=1
+#                 ttt_table[h] = (item[1].node,item[2].node,item[3],item[4],item[5])
+                
+#         h = hash((item[2].node,item[1].node,item[4],item[3],item[5]))
+#         if not h in ttt_table:
+#             ttt_table[h]=(item[2].node,item[1].node,item[4],item[3],item[5])
+#         else:
+#             if ttt_table[h] != (item[2].node,item[1].node,item[4],item[3],item[5]):
+#                 ttt_n+=1
+#                 ttt_table[h] = (item[2].node,item[1].node,item[4],item[3],item[5])               
+        
         if item[1].node.id>item[2].node.id:
             computed_table['*'][item[2].node.key][item[1].node.key][(item[2].node,item[1].node,item[4],item[3],item[5])] = (res.weight.r.val,res.weight.i.val,res.node)
         else:
             computed_table['*'][item[1].node.key][item[2].node.key][(item[1].node,item[2].node,item[3],item[4],item[5])] = (res.weight.r.val,res.weight.i.val,res.node)
+            
+        
+        
+        
     
 def get_index_2_key(var):
     var_sort = copy.copy(var)
@@ -601,7 +664,7 @@ def get_measure_prob(tdd):
 
 
 
-class new_key_node():
+class new_key_node:
     def __init__(self,level,new_key):
         self.level = level
         self.new_key = new_key
@@ -729,7 +792,9 @@ def cont(tdd1,tdd2):
 
 def contract(tdd1,tdd2,key_2_new_key1,key_2_new_key2,cont_num):
     """The contraction of two TDDs, var_cont is in the form [[4,1],[3,2]]"""
-
+    global cont_times
+    cont_times+=1
+    
     k1=tdd1.node.key
     k2=tdd2.node.key
     w1=tdd1.weight
@@ -906,7 +971,8 @@ def Slicing2(tdd,x,c):
         
 
 def add(tdd1,tdd2):
-
+    global add_times
+    add_times+=1
     k1=tdd1.node.key
     k2=tdd2.node.key
 #     print('add 1078',k1,k2,tdd1.weight,tdd2.weight)
@@ -930,8 +996,26 @@ def add(tdd1,tdd2):
             res=TDD(tdd1.node,weig)
             return res
         
+    if tdd1.node.id > tdd2.node.id:
+        return add(tdd2,tdd1)
+    
+    w1 = tdd1.weight
+    w2 = tdd2.weight
+    
+    tdd1.weight = cn1
+    
+    tdd2.weight = cn_divCached(tdd2.weight,w1)
+        
     res = find_computed_table(['+',tdd1,tdd2])
     if res:
+        tdd1.weight = w1
+        releaseCached(tdd2.weight)
+        tdd2.weight = w2
+        if not res.weight==cn0:
+            cn_mul(res.weight,res.weight,w1)
+            if equalsZero(res.weight):
+                releaseCached(res.weight)
+                return TDD(terminal_node,cn0)
         return res
     
     the_successors=[]
@@ -965,10 +1049,13 @@ def add(tdd1,tdd2):
             if not e2.weight==cn0:
                 releaseCached(e2.weight)
                 
-#     print('add 1137',x,the_successors[0].weight,the_successors[1].weight)
     res = normalize(x,the_successors,True)
-#     print('add 1139',x,res.weight)
     insert_2_computed_table(['+',tdd1,tdd2],res)
+    tdd1.weight = w1
+    releaseCached(tdd2.weight)
+    tdd2.weight = w2
+    if not res.weight == cn0:
+        cn_mul(res.weight,res.weight,w1)
     return res
 
 

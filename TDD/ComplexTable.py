@@ -1,6 +1,8 @@
 """Define global variables"""
 
-epi=1e-20
+epi_inv = 2**10
+
+epi=1/epi_inv
 
 complex_table = dict()
 
@@ -112,6 +114,7 @@ cn1 = Complex(oneEntry,zeroEntry)
 cacheAvail = ComplexTableEntry()
 Avail = ComplexTableEntry()
 
+
 def cn_mul(res:Complex, a:Complex, b:Complex):
     """res=a*b"""
     if equalsOne(a):
@@ -161,6 +164,41 @@ def cn_mulCached(a:Complex,b:Complex):
     res.i.val = ar*bi+ai*br
     return res
 
+
+def cn_div(res:Complex, a:Complex, b:Complex):
+        if a == cn0:
+            res.r.val = 0
+            res.i.val = 0
+            return 
+    
+        if a==b:
+            res.r.val=1
+            res.i.val=0
+            return 
+                
+        if b==cn1:
+            res.r.val = a.r.val
+            res.i.val = a.i.val
+            return       
+        
+        ar=a.r.val
+        ai=a.i.val
+        br=b.r.val
+        bi=b.i.val
+        
+        cmag = br*br+bi*bi
+        res.r.val = (ar*br+ai*bi)/cmag
+        res.i.val = (ai*br-ar*bi)/cmag
+        
+def cn_divCached(a:Complex,b:Complex):
+#     c = getCachedComplex()
+    global cacheAvail,cacheCount
+    c = Complex(cacheAvail,cacheAvail.next)
+    cacheAvail=cacheAvail.next.next
+    cacheCount-=2
+    cn_div(c,a,b)
+    return c    
+
 def cn_add(res:Complex, a:Complex, b:Complex):
     """res=a*b"""
     res.r.val = a.r.val+b.r.val
@@ -201,7 +239,7 @@ def Find_Or_Add_Complex_table(c : Complex):
             return Complex(moneEntry,zeroEntry)
         res.i = zeroEntry
 #         key_r = int(val_r/epi)
-        key_r=int(round(val_r/epi))
+        key_r=int(val_r*epi_inv)
         if not key_r in complex_table:
 #             temp_r = getComplexTableEntry()
 #             temp_r.val = val_r
@@ -219,7 +257,7 @@ def Find_Or_Add_Complex_table(c : Complex):
             return Complex(zeroEntry,moneEntry)
         res.r = zeroEntry
 #         key_i = int(val_i/epi)
-        key_i=int(round(val_i/epi))
+        key_i=int(val_i*epi_inv)
         if not key_i in complex_table:
 #             temp_i = getComplexTableEntry()
 #             temp_i.val = val_i
@@ -232,8 +270,8 @@ def Find_Or_Add_Complex_table(c : Complex):
     
 #     key_r = int(val_r/epi)
 #     key_i = int(val_i/epi)
-    key_r=int(round(val_r/epi))
-    key_i=int(round(val_i/epi))
+    key_r=int(val_r*epi_inv)
+    key_i=int(val_i*epi_inv)
 #     print('key',key_r,key_i)
     if not key_r in complex_table:
 #         temp_r = getComplexTableEntry()
