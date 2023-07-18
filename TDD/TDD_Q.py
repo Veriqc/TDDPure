@@ -112,7 +112,7 @@ def cir_2_tn(cir,input_s=[],output_s=[]):
                 qubits_index[k]+=1
         if len(q)>1:
             U=reshape(U)
-        ts.data=U
+        ts.data=U.T
         ts.index_set=var
         tn.tensors.append(ts)
 
