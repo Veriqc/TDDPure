@@ -76,7 +76,7 @@ class TDD:
         temp.key_2_index=copy.copy(self.key_2_index)
         return temp
     
-    def show(self,real_label=True):
+    def show(self,real_label=True,name='output'):
         from graphviz import Digraph
         from IPython.display import Image
         edge=[]              
@@ -85,7 +85,7 @@ class TDD:
         dot.node('-0','',shape='none')
         dot.edge('-0',str(self.node.id),color="blue",label=str(complex(round(self.weight.r.val,2),round(self.weight.i.val,2))))
         dot.format = 'png'
-        return Image(dot.render('output'))
+        return Image(dot.render(name))
     
     def to_array(self,var=[]):
         split_pos=0
@@ -700,7 +700,7 @@ class new_key_node:
 
 key_2_new_key_tree_header = new_key_node(-1,-1)
 
-    
+
 def cont(tdd1,tdd2):
     
     var_cont = [] #to record the indices to be contracted
@@ -719,13 +719,12 @@ def cont(tdd1,tdd2):
         if not var2 in tdd1.index_set:
             var_out.append(var2)
             var_out_name.append(var2.name)
-            
+         
     for var in var_cont:
-        if var.name in var_out_name:
-            var_cont.remove(var)
-            
-    var_cont_name = [idx.name for idx in var_cont]
-            
+        if not var.name in var_out_name:
+            var_cont_name.append(var.name)
+
+
     k1 = 0
     k2 = 0
     new_key = 0
@@ -786,7 +785,6 @@ def cont(tdd1,tdd2):
     
     tdd.index_set=var_out
     tdd.key_2_index = new_key_2_index
-
     return tdd
     
 
@@ -794,6 +792,9 @@ def contract(tdd1,tdd2,key_2_new_key1,key_2_new_key2,cont_num):
     """The contraction of two TDDs, var_cont is in the form [[4,1],[3,2]]"""
     global cont_times
     cont_times+=1
+    
+    
+#     print(tdd1.weight,tdd1.node.key,tdd2.weight,tdd2.node.key,cont_num)
     
     k1=tdd1.node.key
     k2=tdd2.node.key
